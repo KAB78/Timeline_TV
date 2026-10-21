@@ -7,7 +7,6 @@
 <style>
 :root{color-scheme:dark;--bg:#0b0f1a;--card:#141b2d;--card2:#1b2540;--text:#f1f4fb;--mut:#8f9bb8;--acc:#5ab0ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 :root[data-theme="light"]{color-scheme:light;--bg:#eef2f9;--card:#fff;--card2:#e3e9f5;--text:#111827;--mut:#5b6579;--acc:#1f6fd1}
-@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){color-scheme:light;--bg:#eef2f9;--card:#fff;--card2:#e3e9f5;--text:#111827;--mut:#5b6579;--acc:#1f6fd1}}
 *{box-sizing:border-box;margin:0}
 html,body{height:100%}
 body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
@@ -109,6 +108,24 @@ audio{max-width:100%}
     $("strip").innerHTML=h+h;
   }
   setStrip(defaults.map(scene));
+  // Photos et musique depuis le dépôt GitHub (dossiers "photos" et "musique")
+  var REPO="KAB78/Timeline_TV";
+  function list(dir){
+    return fetch("https://api.github.com/repos/"+REPO+"/contents/"+dir).then(function(r){if(!r.ok)throw 0;return r.json()})
+    .then(function(a){return a.filter(function(x){return x.type==="file"}).map(function(x){return dir+"/"+encodeURIComponent(x.name)})});
+  }
+  function playList(urls){
+    var i=0,a=document.createElement("audio");a.controls=true;a.autoplay=true;
+    function go(){a.src=urls[i]}
+    a.onended=function(){i=(i+1)%urls.length;go()};go();
+    $("player").innerHTML="";$("player").appendChild(a);
+  }
+  try{
+    list("photos").then(function(u){u=u.filter(function(x){return /\.(jpe?g|png|webp|gif)$/i.test(x)});if(u.length)setStrip(u.map(function(x){return 'url("'+x+'")'}))}).catch(function(){});
+    list("musique").then(function(u){u=u.filter(function(x){return /\.(mp3|m4a|ogg|wav|aac)$/i.test(x)});if(!u.length)return;
+      var b=document.createElement("button");b.textContent="▶ Ma musique ("+u.length+")";b.onclick=function(){playList(u)};
+      $("mp3b").parentNode.insertBefore(b,$("mp3b"));}).catch(function(){});
+  }catch(e){}
   $("addph").onclick=function(){$("ph").click()};
   $("ph").onchange=function(e){
     var f=[].slice.call(e.target.files);if(!f.length)return;
