@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Écran TV – Tableau de bord</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0f1a;--card:#141b2d;--card2:#1b2540;--text:#f1f4fb;--mut:#8f9bb8;--acc:#5ab0ff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root[data-theme="light"]{color-scheme:light;--bg:#eef2f9;--card:#fff;--card2:#e3e9f5;--text:#111827;--mut:#5b6579;--acc:#1f6fd1}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){color-scheme:light;--bg:#eef2f9;--card:#fff;--card2:#e3e9f5;--text:#111827;--mut:#5b6579;--acc:#1f6fd1}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+.grid{height:100%;display:grid;gap:clamp(8px,1.4vw,22px);padding:clamp(8px,1.6vw,26px);grid-template-columns:1fr 1.5fr;grid-template-rows:auto 1fr auto}
+.card{background:var(--card);border-radius:22px;padding:clamp(12px,1.8vw,28px);min-width:0;min-height:0}
+#clock{grid-row:1;grid-column:1}
+#weather{grid-row:1;grid-column:2}
+#pano{grid-row:2;grid-column:1/3;padding:0;position:relative;overflow:hidden}
+#media{grid-row:3;grid-column:1/3;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.time{font-size:clamp(44px,8vw,120px);font-weight:200;letter-spacing:-.02em;line-height:1;font-variant-numeric:tabular-nums}
+.time small{font-size:.35em;color:var(--mut);margin-left:.2em}
+.date{font-size:clamp(14px,2vw,30px);color:var(--mut);margin-top:.4em;text-transform:capitalize}
+.now{display:flex;align-items:center;gap:16px}
+.now .t{font-size:clamp(36px,5vw,76px);font-weight:300}
+.now .c{color:var(--mut);font-size:clamp(13px,1.6vw,24px)}
+.ico{font-size:clamp(34px,5vw,72px)}
+.days{display:flex;gap:10px;margin-top:12px;overflow:hidden}
+.d{flex:1;background:var(--card2);border-radius:14px;padding:8px;text-align:center;font-size:clamp(11px,1.3vw,18px);min-width:0}
+.d b{display:block;color:var(--mut);font-weight:500}
+.d span{color:var(--mut)}
+.strip{position:absolute;inset:0;display:flex;width:max-content;height:100%;animation:pan 90s linear infinite alternate}
+.strip div{height:100%;aspect-ratio:16/10;flex:none;background-size:cover;background-position:center}
+@keyframes pan{from{transform:translateX(0)}to{transform:translateX(calc(-100% + 100vw))}}
+.cap{position:absolute;left:18px;bottom:14px;background:#0009;color:#fff;border-radius:999px;padding:6px 14px;font-size:14px}
+button,input{font:inherit;color:var(--text);background:var(--card2);border:2px solid transparent;border-radius:12px;padding:10px 16px}
+button{cursor:pointer}
+button:focus,input:focus,button:hover{outline:none;border-color:var(--acc)}
+input[type=text]{flex:1;min-width:180px}
+iframe{border:0;border-radius:14px;width:min(420px,100%);height:180px;background:#000}
+audio{max-width:100%}
+.lbl{color:var(--mut);font-size:14px;width:100%}
+@media (max-width:700px){.grid{grid-template-columns:1fr;grid-template-rows:auto auto 1fr auto;overflow:auto}#clock,#weather,#pano,#media{grid-column:1;grid-row:auto}#pano{min-height:200px}}
+</style>
+</head>
+<body>
+<main class="grid">
+  <section class="card" id="clock">
+    <div class="time" id="time">--:--<small id="sec"></small></div>
+    <div class="date" id="date"></div>
+  </section>
+
+  <section class="card" id="weather">
+    <div class="now"><div class="ico" id="wi">☀️</div><div><div class="t" id="wt">--°</div><div class="c" id="wc"></div></div></div>
+    <div class="days" id="days"></div>
+  </section>
+
+  <section class="card" id="pano" aria-label="Panorama photos">
+    <div class="strip" id="strip"></div>
+    <div class="cap">Panorama · <button id="addph" style="padding:2px 10px">+ Mes photos</button></div>
+    <input type="file" id="ph" accept="image/*" multiple hidden>
+  </section>
+
+  <section class="card" id="media">
+    <div class="lbl">Lecture musique / YouTube</div>
+    <input type="text" id="yt" placeholder="Collez un lien YouTube (vidéo ou playlist)">
+    <button id="ytgo">▶ YouTube</button>
+    <button id="mp3b">🎵 Fichier audio</button>
+    <input type="file" id="mp3" accept="audio/*" multiple hidden>
+    <div id="player" style="width:100%"></div>
+  </section>
+</main>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var JOURS=["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+  // Date et heure
+  function tick(){
+    var n=new Date(),p=function(x){return String(x).padStart(2,"0")};
+    $("time").firstChild.nodeValue=p(n.getHours())+":"+p(n.getMinutes());
+    $("sec").textContent=p(n.getSeconds());
+    $("date").textContent=n.toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  }
+  tick();setInterval(tick,1000);
+
+  // Météo (instantané du 21/10/2026 ; mise à jour en direct si le réseau l’autorise)
+  var W={t:9.3,c:"Ciel dégagé",i:"🌙",d:[["mer.",13.6,8.2,20],["jeu.",14.7,8.6,25],["ven.",13.0,7.9,45],["sam.",14.3,7.9,75],["dim.",14.4,6.5,60]]};
+  function icon(code,day){if(code===0)return day?"☀️":"🌙";if(code<4)return"⛅";if(code<50)return"🌫️";if(code<70)return"🌧️";if(code<80)return"❄️";return"⛈️"}
+  function label(code){return code===0?"Ciel dégagé":code<4?"Éclaircies":code<50?"Brouillard":code<70?"Pluie":code<80?"Neige":"Orage"}
+  function drawW(){
+    $("wt").textContent=Math.round(W.t)+"°C";$("wc").textContent=W.c+" · Croissy-sur-Seine";$("wi").textContent=W.i;
+    $("days").innerHTML=W.d.map(function(d){return '<div class="d"><b>'+d[0]+'</b>'+Math.round(d[1])+'° <span>'+Math.round(d[2])+'°</span><br><span>💧'+d[3]+'%</span></div>'}).join("");
+  }
+  drawW();
+  try{
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=48.8795&longitude=2.1368&current=temperature_2m,weather_code,is_day&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=5")
+    .then(function(r){return r.json()}).then(function(j){
+      W.t=j.current.temperature_2m;W.c=label(j.current.weather_code);W.i=icon(j.current.weather_code,j.current.is_day);
+      W.d=j.daily.time.map(function(t,k){return[JOURS[new Date(t).getDay()],j.daily.temperature_2m_max[k],j.daily.temperature_2m_min[k],j.daily.precipitation_probability_max[k]]});
+      drawW();
+    }).catch(function(){});
+  }catch(e){}
+
+  // Panorama photos (dégradés par défaut ; vos photos remplacent)
+  var defaults=["#1d3557,#457b9d","#2d6a4f,#95d5b2","#6a040f,#f48c06","#3c096c,#9d4edd","#023e8a,#90e0ef","#386641,#a7c957"];
+  function scene(g){return "linear-gradient(180deg,transparent 55%,#0006),radial-gradient(circle at 70% 30%,#fff6 0,transparent 12%),linear-gradient(160deg,"+g+")"}
+  function setStrip(imgs){
+    var h=imgs.map(function(s){return '<div style="background-image:'+s+'"></div>'}).join("");
+    $("strip").innerHTML=h+h;
+  }
+  setStrip(defaults.map(scene));
+  $("addph").onclick=function(){$("ph").click()};
+  $("ph").onchange=function(e){
+    var f=[].slice.call(e.target.files);if(!f.length)return;
+    setStrip(f.map(function(x){return 'url("'+URL.createObjectURL(x)+'")'}));
+  };
+
+  // YouTube
+  function ytEmbed(u){
+    var m=u.match(/[?&]list=([\w-]+)/),v=u.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/);
+    if(v)return "https://www.youtube-nocookie.com/embed/"+v[1]+"?autoplay=1"+(m?"&list="+m[1]:"");
+    if(m)return "https://www.youtube-nocookie.com/embed/videoseries?autoplay=1&list="+m[1];
+    return null;
+  }
+  $("ytgo").onclick=function(){
+    var s=ytEmbed($("yt").value.trim());
+    if(!s){$("player").textContent="Lien YouTube non reconnu.";return}
+    $("player").innerHTML='<iframe src="'+s+'" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+  };
+  $("yt").onkeydown=function(e){if(e.key==="Enter")$("ytgo").click()};
+
+  // Musique locale
+  $("mp3b").onclick=function(){$("mp3").click()};
+  $("mp3").onchange=function(e){
+    var f=[].slice.call(e.target.files);if(!f.length)return;
+    var i=0,a=document.createElement("audio");a.controls=true;a.autoplay=true;
+    function go(){a.src=URL.createObjectURL(f[i]);a.title=f[i].name}
+    a.onended=function(){i=(i+1)%f.length;go()};go();
+    $("player").innerHTML="";$("player").appendChild(a);
+  };
+})();
+</script>
+</body>
+</html>
