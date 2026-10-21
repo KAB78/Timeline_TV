@@ -104,8 +104,8 @@ audio{max-width:100%}
   var defaults=["#1d3557,#457b9d","#2d6a4f,#95d5b2","#6a040f,#f48c06","#3c096c,#9d4edd","#023e8a,#90e0ef","#386641,#a7c957"];
   function scene(g){return "linear-gradient(180deg,transparent 55%,#0006),radial-gradient(circle at 70% 30%,#fff6 0,transparent 12%),linear-gradient(160deg,"+g+")"}
   function setStrip(imgs){
-    var h=imgs.map(function(s){return '<div style="background-image:'+s+'"></div>'}).join("");
-    $("strip").innerHTML=h+h;
+    var st=$("strip");st.innerHTML="";
+    for(var k=0;k<2;k++)imgs.forEach(function(s){var d=document.createElement("div");d.style.backgroundImage=s;st.appendChild(d)});
   }
   setStrip(defaults.map(scene));
   // Photos et musique depuis le dépôt GitHub (dossiers "photos" et "musique")
